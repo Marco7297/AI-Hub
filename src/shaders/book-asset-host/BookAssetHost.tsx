@@ -1,0 +1,10 @@
+import {useEffect,useRef,useState,type CSSProperties} from 'react';
+export type BookAssetProps={className?:string;style?:CSSProperties;edition?:string;controls?:boolean;background?:'dark'|'light'|'checker'|'transparent';open?:boolean};
+export function BookAssetHost({kind,title,className='',style,edition,controls=true,background='dark',open=false}:BookAssetProps&{kind:string;title:string}){
+ const host=useRef<HTMLDivElement>(null),frame=useRef<HTMLIFrameElement>(null);const [visible,setVisible]=useState(true),[awake,setAwake]=useState(()=>typeof document==='undefined'||!document.hidden),[state,setState]=useState('loading');
+ const src='/3d-assets/books/'+kind+'/preview.html?'+new URLSearchParams({controls:String(controls),background,open:String(open),...(edition?{edition}:{})});const mounted=visible&&awake;
+ useEffect(()=>{const observer=new IntersectionObserver(([entry])=>setVisible(entry.isIntersecting),{rootMargin:'80px'});if(host.current)observer.observe(host.current);return()=>observer.disconnect();},[]);
+ useEffect(()=>{const update=()=>setAwake(!document.hidden);document.addEventListener('visibilitychange',update);return()=>document.removeEventListener('visibilitychange',update);},[]);
+ useEffect(()=>{setState('loading');const receive=(event:MessageEvent)=>{if(event.source===frame.current?.contentWindow&&event.data?.type==='book-asset'&&event.data.kind===kind&&['ready','error'].includes(event.data.state))setState(event.data.state);};window.addEventListener('message',receive);return()=>window.removeEventListener('message',receive);},[src,mounted,kind]);
+ return <div ref={host} className={'threeui-background book-asset '+className} role="group" aria-label={title} data-state={mounted?state:'paused'} style={{position:'relative',overflow:'hidden',background:background==='transparent'?'transparent':background==='light'?'#e5ded0':'#1d1b1b',pointerEvents:'auto',...style}}>{mounted&&<iframe key={src} ref={frame} title={title} src={src} sandbox="allow-scripts" style={{position:'absolute',inset:0,width:'100%',height:'100%',border:0,pointerEvents:'auto'}}/>}</div>;
+}
